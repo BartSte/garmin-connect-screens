@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<iq:manifest xmlns:iq="http://www.garmin.com/xml/connectiq" version="3">
+    <iq:application id="91a7bbd7-5daa-47f6-91cb-2a171303c46a"
+                    name="@Strings.AppName"
+                    launchLabel="@Strings.AppName"
+                    minSdkVersion="3.2.0"
+                    targetSdkVersion="7.4.0"
+                    type="dataField"
+                    entry="Minimal7">
+        <iq:products>
+            <iq:product id="edge_explore_2"/>
+        </iq:products>
+        <iq:permissions/>
+        <iq:languages>
+            <iq:language>eng</iq:language>
+        </iq:languages>
+    </iq:application>
+</iq:manifest>

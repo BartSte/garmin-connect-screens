@@ -1,0 +1,70 @@
+name: Release data screen
+
+# Triggered by a version tag scoped to a specific screen, e.g.:
+#   git tag screens/minimal-7/v1.0.0
+#   git push origin screens/minimal-7/v1.0.0
+on:
+  push:
+    tags:
+      - 'screens/*/v[0-9]*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Derive screen name and semver from the tag ────────────────────
+      # Tag format: screens/<screen-name>/v<semver>
+      - name: Parse tag
+        id: tag
+        run: |
+          # GITHUB_REF_NAME = "screens/minimal-7/v1.0.0"
+          SCREEN=$(echo "$GITHUB_REF_NAME"  | cut -d'/' -f2)   # minimal-7
+          VERSION=$(echo "$GITHUB_REF_NAME" | cut -d'/' -f3)   # v1.0.0
+          echo "screen=$SCREEN"   >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # ── Install the Garmin Connect IQ SDK (headless, compiler only) ───
+      # Set CIQ_SDK_URL as a repository variable pointing to the Linux SDK
+      # zip from https://developer.garmin.com/connect-iq/sdk/
+      # Example value: https://developer.garmin.com/downloads/connect-iq/sdks/connectiq-sdk-lin-7.4.3-2024-12-11-90ec25e45.zip
+      - name: Install Connect IQ SDK
+        run: |
+          curl -fsSL "${{ vars.CIQ_SDK_URL }}" -o ciq-sdk.zip
+          unzip -q ciq-sdk.zip -d ciq-sdk
+          # The zip extracts into a versioned subdirectory — find monkeyc dynamically.
+          SDK_BIN=$(find ciq-sdk -name monkeyc -type f | xargs dirname)
+          echo "$SDK_BIN" >> "$GITHUB_PATH"
+
+      # ── Write the developer key from the repository secret ────────────
+      # CIQ_DEVELOPER_KEY must be the base64-encoded content of developer_key.der.
+      # Generate once locally:
+      #   openssl genrsa -out developer_key.pem 4096
+      #   openssl pkcs8 -topk8 -inform PEM -outform DER \
+      #       -in developer_key.pem -out developer_key.der -nocrypt
+      #   base64 developer_key.der   # paste this into the GitHub secret
+      - name: Write developer key
+        run: |
+          echo "${{ secrets.CIQ_DEVELOPER_KEY }}" | base64 -d > developer_key.der
+
+      # ── Compile the data field to a signed .iq package ───────────────
+      - name: Build
+        run: |
+          SCREEN="${{ steps.tag.outputs.screen }}"
+          mkdir -p "screens/$SCREEN/bin"
+          monkeyc \
+            -f "screens/$SCREEN/monkey.jungle" \
+            -o "screens/$SCREEN/bin/$SCREEN.iq" \
+            -y developer_key.der \
+            -e \
+            -r \
+            -w
+
+      # ── Publish the .iq file as a GitHub release ──────────────────────
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ steps.tag.outputs.screen }} ${{ steps.tag.outputs.version }}"
+          files: "screens/${{ steps.tag.outputs.screen }}/bin/${{ steps.tag.outputs.screen }}.iq"

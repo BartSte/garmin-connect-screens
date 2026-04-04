@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<properties>
+    <!-- FTP in watts, used for Coggan power zone coloring on the 3s power row. -->
+    <property id="ftp" type="number">230</property>
+</properties>
