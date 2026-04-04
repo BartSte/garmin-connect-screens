@@ -26,17 +26,38 @@ jobs:
           echo "screen=$SCREEN"   >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      # ── Install the Garmin Connect IQ SDK (headless, compiler only) ───
-      # Set CIQ_SDK_URL as a repository variable pointing to the Linux SDK
-      # zip from https://developer.garmin.com/connect-iq/sdk/
-      # Example value: https://developer.garmin.com/downloads/connect-iq/sdks/connectiq-sdk-lin-7.4.3-2024-12-11-90ec25e45.zip
+      # ── Install the Connect IQ SDK manager CLI ───────────────────────
+      # Headless replacement for the Garmin GUI SDK Manager.
+      # Repo: https://github.com/lindell/connect-iq-sdk-manager-cli
+      - name: Install connect-iq-sdk-manager
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/lindell/connect-iq-sdk-manager-cli/master/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # ── Accept the Garmin license agreement non-interactively ─────────
+      # Capture the hash once locally:
+      #   connect-iq-sdk-manager agreement view
+      # Store the printed hash as a repository variable: CONNECT_IQ_AGREEMENT_HASH
+      # If this step fails, the agreement text has been updated by Garmin —
+      # re-run 'agreement view' locally and update the variable.
+      - name: Accept Connect IQ license agreement
+        run: |
+          connect-iq-sdk-manager agreement accept \
+            --agreement-hash "${{ vars.CONNECT_IQ_AGREEMENT_HASH }}"
+
+      # ── Download the Connect IQ SDK ───────────────────────────────────
       - name: Install Connect IQ SDK
         run: |
-          curl -fsSL "${{ vars.CIQ_SDK_URL }}" -o ciq-sdk.zip
-          unzip -q ciq-sdk.zip -d ciq-sdk
-          # The zip extracts into a versioned subdirectory — find monkeyc dynamically.
-          SDK_BIN=$(find ciq-sdk -name monkeyc -type f | xargs dirname)
-          echo "$SDK_BIN" >> "$GITHUB_PATH"
+          connect-iq-sdk-manager sdk download ">=8.4.0"
+          connect-iq-sdk-manager sdk set ">=8.4.0"
+          echo "$(connect-iq-sdk-manager sdk current-path --bin)" >> "$GITHUB_PATH"
+
+      # ── Download device definitions for this screen ───────────────────
+      - name: Download device definitions
+        run: |
+          SCREEN="${{ steps.tag.outputs.screen }}"
+          connect-iq-sdk-manager device download \
+            --manifest "screens/$SCREEN/monkey.jungle"
 
       # ── Write the developer key from the repository secret ────────────
       # CIQ_DEVELOPER_KEY must be the base64-encoded content of developer_key.der.
