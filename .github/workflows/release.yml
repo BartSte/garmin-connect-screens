@@ -52,6 +52,16 @@ jobs:
           connect-iq-sdk-manager sdk set ">=8.4.0"
           echo "$(connect-iq-sdk-manager sdk current-path --bin)" >> "$GITHUB_PATH"
 
+      # ── Log in to Garmin (required for device definition downloads) ─────
+      # Store your Garmin developer account credentials as repository secrets:
+      #   GARMIN_USERNAME  — your Garmin account email
+      #   GARMIN_PASSWORD  — your Garmin account password
+      - name: Login to Garmin
+        run: connect-iq-sdk-manager login
+        env:
+          GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+
       # ── Download device definitions for this screen ───────────────────
       - name: Download device definitions
         run: |
