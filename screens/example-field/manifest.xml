@@ -3,7 +3,7 @@
     <iq:application id="7754a7d6-2ad0-4919-a8da-f4cdb0a75d40"
                     name="@Strings.AppName"
                     minSdkVersion="3.2.0"
-                    type="dataField"
+                    type="datafield"
                     entry="ExampleField">
         <iq:products>
             <iq:product id="edge_explore_2"/>
