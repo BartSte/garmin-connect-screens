@@ -6,7 +6,7 @@
                     type="datafield"
                     entry="ExampleField">
         <iq:products>
-            <iq:product id="edge_explore_2"/>
+            <iq:product id="edgeexplore2"/>
         </iq:products>
         <iq:permissions/>
         <iq:languages>
