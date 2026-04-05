@@ -52,6 +52,23 @@ jobs:
           connect-iq-sdk-manager sdk set ">=8.4.0"
           echo "$(connect-iq-sdk-manager sdk current-path --bin)" >> "$GITHUB_PATH"
 
+      # ── Login to Garmin and download per-device definition files ────────
+      # connect-iq-sdk-manager sdk download only gets the compiler/tools.
+      # Per-device JSON files (compiler.json, simulator.json) are separate
+      # and must be fetched via 'device download' — this requires a Garmin
+      # account. Without these files monkeyc cannot recognise device IDs.
+      - name: Login to Garmin
+        run: connect-iq-sdk-manager login
+        env:
+          GARMIN_USERNAME: ${{ secrets.GARMIN_USERNAME }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+
+      - name: Download device definitions
+        run: |
+          SCREEN="${{ steps.tag.outputs.screen }}"
+          connect-iq-sdk-manager device download \
+            --manifest "screens/$SCREEN/manifest.xml"
+
       # ── Write the developer key from the repository secret ────────────
       # CIQ_DEVELOPER_KEY must be the base64-encoded content of developer_key.der.
       # Generate once locally:
