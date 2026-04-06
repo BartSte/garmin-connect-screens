@@ -82,22 +82,26 @@ jobs:
         run: |
           echo "${{ secrets.CIQ_DEVELOPER_KEY }}" | base64 -d > developer_key.der
 
-      # ── Compile the data field to a signed .iq package ───────────────
+      # ── Compile a signed .prg for each target device listed in the manifest ──
+      # .prg is the sideloadable binary for a specific device; one file per
+      # device ID found in manifest.xml.  Output: <screen>-<device>.prg
       - name: Build
         run: |
           SCREEN="${{ steps.tag.outputs.screen }}"
           mkdir -p "screens/$SCREEN/bin"
-          monkeyc \
-            -f "screens/$SCREEN/monkey.jungle" \
-            -o "screens/$SCREEN/bin/$SCREEN.iq" \
-            -y developer_key.der \
-            -e \
-            -r \
-            -w
+          while IFS= read -r DEVICE; do
+            monkeyc \
+              -f "screens/$SCREEN/monkey.jungle" \
+              -o "screens/$SCREEN/bin/${SCREEN}-${DEVICE}.prg" \
+              -y developer_key.der \
+              -d "$DEVICE" \
+              -r \
+              -w
+          done < <(grep -oP '(?<=<iq:product id=")[^"]+' "screens/$SCREEN/manifest.xml")
 
-      # ── Publish the .iq file as a GitHub release ──────────────────────
+      # ── Publish the .prg file(s) as a GitHub release ─────────────────
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           name: "${{ steps.tag.outputs.screen }} ${{ steps.tag.outputs.version }}"
-          files: "screens/${{ steps.tag.outputs.screen }}/bin/${{ steps.tag.outputs.screen }}.iq"
+          files: "screens/${{ steps.tag.outputs.screen }}/bin/*.prg"
