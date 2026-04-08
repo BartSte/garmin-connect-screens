@@ -6,10 +6,14 @@ bin/
 *.debug.xml
 
 # Connect IQ SDK / Eclipse project files
+developer_key*
 .settings/
 .project
 .classpath
 .metadata/
+
+# AI
+.codex
 
 # VS Code
 .vscode/
@@ -69,3 +73,4 @@ dkms.conf
 
 # debug information files
 *.dwo
+

@@ -1,8 +1,8 @@
 import Toybox.WatchUi;
 import Toybox.Graphics;
 import Toybox.Activity;
-import Toybox.System;
 import Toybox.Application;
+import Toybox.System;
 import Toybox.Lang;
 
 // Minimal7 — full-screen data field for the Garmin Edge Explore 2.
@@ -52,21 +52,15 @@ class Minimal7 extends WatchUi.DataField {
     hidden var mPowerIdx   as Number = 0;
     hidden var mPowerCount as Number = 0; // tracks warm-up: 0–3 samples seen so far
 
-    // ── FTP (loaded once at startup from user settings) ───────────────────
+    // ── FTP ───────────────────────────────────────────────────────────────
     // mFtp == 0 means no valid FTP is configured; zone colouring is disabled.
     hidden var mFtp as Number = 230;
 
     function initialize() {
         DataField.initialize();
-        var ftpVal = Application.Properties.getValue("ftp");
-        if (ftpVal != null) {
-            var v = ftpVal as Number;
-            // 0 or negative disables zone colouring rather than falling back to
-            // an arbitrary default that would be wrong for this rider.
-            mFtp = (v > 0) ? v : 0;
-        }
-        // If ftpVal is null (e.g. sideloaded .prg with no registered settings),
-        // mFtp retains its field-level default of 230.
+
+        var ftpValue = Application.Properties.getValue("ftp");
+        mFtp = valueToNumber(ftpValue, 230);
     }
 
     // onLayout is intentionally empty.
@@ -81,14 +75,10 @@ class Minimal7 extends WatchUi.DataField {
         mHour   = clock.hour;
         mMinute = clock.min;
 
-        mTimerMs = (info has :timerTime && info.timerTime != null)
-            ? (info.timerTime as Number)
-            : 0;
+        mTimerMs = valueToNumber(info has :timerTime ? info.timerTime : null, 0);
 
         // Advance the ring buffer with the latest power sample.
-        var rawPower = (info has :currentPower && info.currentPower != null)
-            ? (info.currentPower as Number)
-            : 0;
+        var rawPower = valueToNumber(info has :currentPower ? info.currentPower : null, 0);
         if (mPowerCount < 3) {
             mPowerCount++;
             if (mPowerCount == 1) {
@@ -104,21 +94,13 @@ class Minimal7 extends WatchUi.DataField {
         // +1 before dividing gives nearest-integer rounding instead of floor.
         m3sPower = (mPowerBuf[0] + mPowerBuf[1] + mPowerBuf[2] + 1) / 3;
 
-        mSpeed = (info has :currentSpeed && info.currentSpeed != null)
-            ? ((info.currentSpeed as Float) * 3.6f) // m/s → km/h
-            : 0.0f;
+        mSpeed = valueToFloat(info has :currentSpeed ? info.currentSpeed : null, 0.0f) * 3.6f;
 
-        mCadence = (info has :currentCadence && info.currentCadence != null)
-            ? (info.currentCadence as Number)
-            : 0;
+        mCadence = valueToNumber(info has :currentCadence ? info.currentCadence : null, 0);
 
-        mAscent = (info has :totalAscent && info.totalAscent != null)
-            ? (info.totalAscent as Float) // SDK type is Float; retain precision
-            : 0.0f;
+        mAscent = valueToFloat(info has :totalAscent ? info.totalAscent : null, 0.0f);
 
-        mDistanceKm = (info has :elapsedDistance && info.elapsedDistance != null)
-            ? ((info.elapsedDistance as Float) / 1000.0f) // m → km
-            : 0.0f;
+        mDistanceKm = valueToFloat(info has :elapsedDistance ? info.elapsedDistance : null, 0.0f) / 1000.0f;
     }
 
     // Called when the field needs repainting.
@@ -229,6 +211,44 @@ class Minimal7 extends WatchUi.DataField {
         return (getBackgroundColor() == Graphics.COLOR_BLACK)
             ? Graphics.COLOR_WHITE
             : Graphics.COLOR_BLACK;
+    }
+
+    hidden function valueToNumber(value as Lang.Object or Null, fallback as Number) as Number {
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Lang.Number) {
+            return value as Lang.Number;
+        }
+        if (value instanceof Lang.Long) {
+            return (value as Lang.Long).toNumber();
+        }
+        if (value instanceof Lang.Float) {
+            return (value as Lang.Float).toNumber();
+        }
+        if (value instanceof Lang.Double) {
+            return (value as Lang.Double).toNumber();
+        }
+        return fallback;
+    }
+
+    hidden function valueToFloat(value as Lang.Object or Null, fallback as Float) as Float {
+        if (value == null) {
+            return fallback;
+        }
+        if (value instanceof Lang.Float) {
+            return value as Lang.Float;
+        }
+        if (value instanceof Lang.Double) {
+            return (value as Lang.Double).toFloat();
+        }
+        if (value instanceof Lang.Long) {
+            return (value as Lang.Long).toFloat();
+        }
+        if (value instanceof Lang.Number) {
+            return (value as Lang.Number).toFloat();
+        }
+        return fallback;
     }
 
     // Returns the Coggan zone background color for a given % of FTP.
