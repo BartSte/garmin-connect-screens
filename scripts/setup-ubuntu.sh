@@ -107,7 +107,7 @@ download_devices() {
   while IFS= read -r manifest; do
     log "Downloading device definitions for ${manifest#$PROJECT_ROOT/}"
     connect-iq-sdk-manager device download --manifest "$manifest" --include-fonts
-  done < <(find "$PROJECT_ROOT/screens" -mindepth 2 -maxdepth 2 -name manifest.xml | sort)
+  done < <(find "$PROJECT_ROOT/fields" -mindepth 2 -maxdepth 2 -name manifest.xml | sort)
 }
 
 main() {
@@ -133,9 +133,9 @@ Next steps:
        openssl genrsa -out developer_key.pem 4096
        openssl pkcs8 -topk8 -inform PEM -outform DER \\
          -in developer_key.pem -out developer_key.der -nocrypt
-  3. Build a screen, for example:
-       monkeyc -f screens/example-field/monkey.jungle \\
-         -o screens/example-field/bin/example-field.prg \\
+  3. Build a field, for example:
+       monkeyc -f fields/example-field/monkey.jungle \\
+         -o fields/example-field/bin/example-field.prg \\
          -y developer_key.der -d edgeexplore2 -r -w
 EOF
 }

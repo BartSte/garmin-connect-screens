@@ -1,12 +1,12 @@
-name: Release data screen
+name: Release data field
 
-# Triggered by a version tag scoped to a specific screen, e.g.:
-#   git tag screens/minimal-7/v1.0.0
-#   git push origin screens/minimal-7/v1.0.0
+# Triggered by a version tag scoped to a specific field, e.g.:
+#   git tag fields/minimal-7/v1.0.0
+#   git push origin fields/minimal-7/v1.0.0
 on:
   push:
     tags:
-      - 'screens/*/v[0-9]*'
+      - 'fields/*/v[0-9]*'
 
 jobs:
   build-and-release:
@@ -17,15 +17,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # ── Derive screen name and semver from the tag ────────────────────
-      # Tag format: screens/<screen-name>/v<semver>
+      # ── Derive field name and semver from the tag ─────────────────────
+      # Tag format: fields/<field-name>/v<semver>
       - name: Parse tag
         id: tag
         run: |
-          # GITHUB_REF_NAME = "screens/minimal-7/v1.0.0"
-          SCREEN=$(echo "$GITHUB_REF_NAME"  | cut -d'/' -f2)   # minimal-7
+          # GITHUB_REF_NAME = "fields/minimal-7/v1.0.0"
+          FIELD=$(echo "$GITHUB_REF_NAME"   | cut -d'/' -f2)   # minimal-7
           VERSION=$(echo "$GITHUB_REF_NAME" | cut -d'/' -f3)   # v1.0.0
-          echo "screen=$SCREEN"   >> "$GITHUB_OUTPUT"
+          echo "field=$FIELD"     >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       # ── Install the Connect IQ SDK manager CLI ───────────────────────
@@ -67,9 +67,9 @@ jobs:
 
       - name: Download device definitions
         run: |
-          SCREEN="${{ steps.tag.outputs.screen }}"
+          FIELD="${{ steps.tag.outputs.field }}"
           connect-iq-sdk-manager device download \
-            --manifest "screens/$SCREEN/manifest.xml"
+            --manifest "fields/$FIELD/manifest.xml"
 
       # ── Write the developer key from the repository secret ────────────
       # CIQ_DEVELOPER_KEY must be the base64-encoded content of developer_key.der.
@@ -84,24 +84,24 @@ jobs:
 
       # ── Compile a signed .prg for each target device listed in the manifest ──
       # .prg is the sideloadable binary for a specific device; one file per
-      # device ID found in manifest.xml.  Output: <screen>-<device>.prg
+      # device ID found in manifest.xml. Output: <field>-<device>.prg
       - name: Build
         run: |
-          SCREEN="${{ steps.tag.outputs.screen }}"
-          mkdir -p "screens/$SCREEN/bin"
+          FIELD="${{ steps.tag.outputs.field }}"
+          mkdir -p "fields/$FIELD/bin"
           while IFS= read -r DEVICE; do
             monkeyc \
-              -f "screens/$SCREEN/monkey.jungle" \
-              -o "screens/$SCREEN/bin/${SCREEN}-${DEVICE}.prg" \
+              -f "fields/$FIELD/monkey.jungle" \
+              -o "fields/$FIELD/bin/${FIELD}-${DEVICE}.prg" \
               -y developer_key.der \
               -d "$DEVICE" \
               -r \
               -w
-          done < <(grep -oP '(?<=<iq:product id=")[^"]+' "screens/$SCREEN/manifest.xml")
+          done < <(grep -oP '(?<=<iq:product id=")[^"]+' "fields/$FIELD/manifest.xml")
 
       # ── Publish the .prg file(s) as a GitHub release ─────────────────
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          name: "${{ steps.tag.outputs.screen }} ${{ steps.tag.outputs.version }}"
-          files: "screens/${{ steps.tag.outputs.screen }}/bin/*.prg"
+          name: "${{ steps.tag.outputs.field }} ${{ steps.tag.outputs.version }}"
+          files: "fields/${{ steps.tag.outputs.field }}/bin/*.prg"

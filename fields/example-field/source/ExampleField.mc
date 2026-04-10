@@ -4,7 +4,7 @@ import Toybox.Activity;
 import Toybox.Lang;
 
 // ExampleField is a simple data field that displays the current speed.
-// Copy this as a starting point for new data screens.
+// Copy this as a starting point for new data fields.
 class ExampleField extends WatchUi.DataField {
 
     hidden var mValue as Float = 0.0f;
